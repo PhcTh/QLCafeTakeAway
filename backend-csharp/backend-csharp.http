@@ -1,0 +1,49 @@
+@backend_csharp_HostAddress = http://localhost:5155
+
+### Health check
+GET {{backend_csharp_HostAddress}}/api/health
+Accept: application/json
+
+###
+
+### Login with seed data
+POST {{backend_csharp_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "quantri01",
+  "password": "123456"
+}
+
+###
+
+### List customers
+GET {{backend_csharp_HostAddress}}/api/khach-hang
+Accept: application/json
+
+###
+
+### Search drinks
+GET {{backend_csharp_HostAddress}}/api/do-uong?keyword=ca
+Accept: application/json
+
+###
+
+### Daily revenue report
+GET {{backend_csharp_HostAddress}}/api/bao-cao/doanh-thu-ngay?ngay=2026-06-01
+Accept: application/json
+
+###
+
+### Top drinks report
+GET {{backend_csharp_HostAddress}}/api/bao-cao/do-uong-ban-chay?thang=6&nam=2026
+Accept: application/json
+
+###
+
+### Recreate database from ../database scripts
+### WARNING: this drops and recreates QLBH_TAKEAWAY.
+POST {{backend_csharp_HostAddress}}/api/database/recreate
+Accept: application/json
+
+###
