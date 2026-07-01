@@ -7,7 +7,6 @@ Hệ thống quản lý bán hàng Take Away cho mô hình quán cà phê/đồ 
 - Đăng nhập bằng JWT, lưu phiên đăng nhập ở frontend.
 - Phân quyền theo nhóm người dùng: phục vụ, thu ngân, pha chế, quản trị.
 - Quản lý danh mục: đồ uống, loại đồ uống, nguyên liệu, khách hàng, nhà cung cấp.
-- Phân trang 5 dòng/trang và bộ lọc cơ bản cho các màn hình danh mục.
 - Quản lý nghiệp vụ: lập đơn nguyên liệu mua, cập nhật trạng thái, nhập hàng, kiểm kê.
 - Báo cáo: doanh thu ngày, đồ uống bán chạy.
 - Quản trị hệ thống: quản lý tài khoản và nhóm quyền.
