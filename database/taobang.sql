@@ -80,13 +80,15 @@ CREATE TABLE PHANQUYEN (
 CREATE TABLE LDU (
     ma_ldu          VARCHAR(10)    NOT NULL PRIMARY KEY,
     tenloaidouong   NVARCHAR(50)   NOT NULL,
-    mota            NVARCHAR(100)  NULL
+    mota            NVARCHAR(100)  NULL,
+    trangthai       BIT            NOT NULL DEFAULT 1
 );
 
 CREATE TABLE NL (
     ma_nl           VARCHAR(10)    NOT NULL PRIMARY KEY,
     tennguyenlieu   NVARCHAR(50)   NOT NULL,
-    donvitinh       NVARCHAR(20)   NOT NULL
+    donvitinh       NVARCHAR(20)   NOT NULL,
+    trangthai       BIT            NOT NULL DEFAULT 1
 );
 
 CREATE TABLE K_H (
@@ -94,14 +96,16 @@ CREATE TABLE K_H (
     tenkhachhang    NVARCHAR(50)   NOT NULL,
     sodienthoai     VARCHAR(11)    NULL,
     diachi          NVARCHAR(100)  NULL,
-    gioitinh        NVARCHAR(10)   NULL
+    gioitinh        NVARCHAR(10)   NULL,
+    trangthai       BIT            NOT NULL DEFAULT 1
 );
 
 CREATE TABLE NCC (
     ma_ncc              VARCHAR(10)    NOT NULL PRIMARY KEY,
     tennhacungcap       NVARCHAR(100)  NOT NULL,
     diachincc           NVARCHAR(100)  NULL,
-    sodienthoaincc      VARCHAR(11)    NULL
+    sodienthoaincc      VARCHAR(11)    NULL,
+    trangthai           BIT            NOT NULL DEFAULT 1
 );
 
 CREATE TABLE DU (
@@ -109,6 +113,7 @@ CREATE TABLE DU (
     ma_ldu          VARCHAR(10)     NOT NULL,
     tendouong       NVARCHAR(50)    NOT NULL,
     dongia          DECIMAL(18,2)   NOT NULL,
+    trangthai       BIT             NOT NULL DEFAULT 1,
 
     CONSTRAINT FK_DU_LDU
         FOREIGN KEY (ma_ldu) REFERENCES LDU(ma_ldu),
@@ -249,9 +254,13 @@ CREATE TABLE D_NLM (
     quanly          NVARCHAR(50)    NULL,
     tennd           NVARCHAR(50)    NOT NULL,
     ma_nd           VARCHAR(10)     NOT NULL,
+    trangthai       NVARCHAR(20)    NOT NULL DEFAULT N'MoiLap',
 
     CONSTRAINT FK_D_NLM_NGUOIDUNG
-        FOREIGN KEY (ma_nd) REFERENCES NGUOIDUNG(ma_nd)
+        FOREIGN KEY (ma_nd) REFERENCES NGUOIDUNG(ma_nd),
+
+    CONSTRAINT CK_D_NLM_TRANGTHAI
+        CHECK (trangthai IN (N'MoiLap', N'DaGuiNCC', N'DaNhapHang', N'DaHuy'))
 );
 
 CREATE TABLE C_T_DNLMUA (

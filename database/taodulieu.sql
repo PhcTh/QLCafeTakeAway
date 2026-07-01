@@ -232,27 +232,27 @@ GO
 
 INSERT INTO D_NLM
 (so_dnlm, ngaylapdon, nhacungcap, diachi, sodienthoai, bophan,
- ghichu, nguoilapdon, quanly, tennd, ma_nd)
+ ghichu, nguoilapdon, quanly, tennd, ma_nd, trangthai)
 VALUES
 ('DN001', '2026-06-01', N'Công ty Cà phê Việt', N'TP. Hồ Chí Minh', '0911111111',
  N'Bộ phận thu ngân', N'Mua bổ sung cà phê hạt', N'Trần Thị Bình', N'Phạm Thị Dung',
- N'Trần Thị Bình', 'ND002'),
+ N'Trần Thị Bình', 'ND002', N'DaNhapHang'),
 
 ('DN002', '2026-06-01', N'Nhà cung cấp Sữa An Bình', N'Cần Thơ', '0922222222',
  N'Bộ phận thu ngân', N'Mua sữa tươi', N'Trần Thị Bình', N'Phạm Thị Dung',
- N'Trần Thị Bình', 'ND002'),
+ N'Trần Thị Bình', 'ND002', N'DaNhapHang'),
 
 ('DN003', '2026-06-02', N'Đại lý Nguyên liệu Pha Chế Miền Tây', N'Đồng Tháp', '0933333333',
  N'Bộ phận thu ngân', N'Mua đường và trân châu', N'Trần Thị Bình', N'Phạm Thị Dung',
- N'Trần Thị Bình', 'ND002'),
+ N'Trần Thị Bình', 'ND002', N'DaNhapHang'),
 
 ('DN004', '2026-06-02', N'Công ty Trà Xanh Việt', N'Lâm Đồng', '0944444444',
  N'Bộ phận thu ngân', N'Mua trà đen', N'Trần Thị Bình', N'Phạm Thị Dung',
- N'Trần Thị Bình', 'ND002'),
+ N'Trần Thị Bình', 'ND002', N'DaNhapHang'),
 
 ('DN005', '2026-06-03', N'Vựa Trái Cây Tươi Cao Lãnh', N'Đồng Tháp', '0955555555',
  N'Bộ phận thu ngân', N'Mua cam tươi', N'Trần Thị Bình', N'Phạm Thị Dung',
- N'Trần Thị Bình', 'ND002');
+ N'Trần Thị Bình', 'ND002', N'DaNhapHang');
 GO
 
 INSERT INTO C_T_DNLMUA
