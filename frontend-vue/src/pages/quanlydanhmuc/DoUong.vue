@@ -15,6 +15,17 @@
           <button @click="timKiem"><span class="icon-nut">⌕</span>Tìm kiếm</button>
         </div>
 
+        <div class="khu-bo-loc">
+          <select v-model="boLoc.maLdu" @change="apDungBoLoc()">
+            <option value="">Tất cả loại</option>
+            <option v-for="loai in dsLoaiDoUong" :key="loai.maLdu" :value="loai.maLdu">
+              {{ loai.tenLoaiDoUong }}
+            </option>
+          </select>
+          <input v-model.number="boLoc.giaTu" type="number" min="0" placeholder="Giá từ" @input="apDungBoLoc()">
+          <input v-model.number="boLoc.giaDen" type="number" min="0" placeholder="Giá đến" @input="apDungBoLoc()">
+        </div>
+
         <div class="khu-nut">
           <button @click="batDauThem"><span class="icon-nut">+</span>Thêm</button>
           <button @click="lamMoi"><span class="icon-nut">↻</span>Làm mới</button>
@@ -55,7 +66,7 @@
         </tbody>
       </table>
 
-      <div v-if="phanTrang.totalPages > 1" class="khu-nut form-actions">
+      <div v-if="phanTrang.totalPages > 0" class="khu-nut form-actions khu-phan-trang">
         <button :disabled="phanTrang.page <= 1" @click="doiTrang(phanTrang.page - 1)">Trước</button>
         <span>Trang {{ phanTrang.page }} / {{ phanTrang.totalPages }}</span>
         <button :disabled="phanTrang.page >= phanTrang.totalPages" @click="doiTrang(phanTrang.page + 1)">Sau</button>
@@ -134,6 +145,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { csharpApi } from '../../api/csharpApi'
 
 const dsDoUong = ref([])
+const tatCaDoUong = ref([])
 const dsLoaiDoUong = ref([])
 const tuKhoa = ref('')
 const thongBao = ref('')
@@ -143,9 +155,14 @@ const hopThoaiDangMo = ref('')
 const dongDangXem = ref(null)
 const phanTrang = reactive({
   page: 1,
-  pageSize: 10,
+  pageSize: 5,
   totalItems: 0,
   totalPages: 0
+})
+const boLoc = reactive({
+  maLdu: '',
+  giaTu: '',
+  giaDen: ''
 })
 
 const form = reactive({
@@ -170,11 +187,9 @@ async function taiLoaiDoUong() {
 
 async function taiDuLieu() {
   try {
-    const response = await csharpApi.getDoUong(tuKhoa.value, {
-      page: phanTrang.page,
-      pageSize: phanTrang.pageSize
-    })
-    ganDuLieuPhanTrang(response)
+    const response = await csharpApi.getDoUong(tuKhoa.value)
+    tatCaDoUong.value = Array.isArray(response) ? response : response.items || []
+    apDungBoLoc(false)
     baoThanhCong('Tải dữ liệu đồ uống thành công.')
   } catch (error) {
     baoLoi(error.message)
@@ -247,6 +262,9 @@ async function xoaDuLieu(maDu) {
 function lamMoi() {
   tuKhoa.value = ''
   phanTrang.page = 1
+  boLoc.maLdu = ''
+  boLoc.giaTu = ''
+  boLoc.giaDen = ''
   dongHopThoai()
   taiLoaiDoUong()
   taiDuLieu()
@@ -284,24 +302,35 @@ function dinhDangTien(value) {
   return Number(value || 0).toLocaleString('vi-VN') + ' đ'
 }
 
-function ganDuLieuPhanTrang(response) {
-  if (Array.isArray(response)) {
-    dsDoUong.value = response
-    phanTrang.totalItems = response.length
-    phanTrang.totalPages = response.length ? 1 : 0
-    return
-  }
+function apDungBoLoc(resetPage = true) {
+  if (resetPage) phanTrang.page = 1
+  ganDuLieuPhanTrang(tatCaDoUong.value.filter(locDoUong))
+}
 
-  dsDoUong.value = response.items || []
-  phanTrang.page = response.page || 1
-  phanTrang.pageSize = response.pageSize || phanTrang.pageSize
-  phanTrang.totalItems = response.totalItems || 0
-  phanTrang.totalPages = response.totalPages || 0
+function locDoUong(du) {
+  const gia = Number(du.donGia || 0)
+  const giaTu = boLoc.giaTu === '' ? null : Number(boLoc.giaTu)
+  const giaDen = boLoc.giaDen === '' ? null : Number(boLoc.giaDen)
+
+  return (!boLoc.maLdu || du.maLdu === boLoc.maLdu)
+    && (giaTu === null || gia >= giaTu)
+    && (giaDen === null || gia <= giaDen)
+}
+
+function ganDuLieuPhanTrang(items) {
+  const totalItems = items.length
+  const totalPages = totalItems ? Math.ceil(totalItems / phanTrang.pageSize) : 0
+  if (phanTrang.page > totalPages) phanTrang.page = totalPages || 1
+
+  const start = (phanTrang.page - 1) * phanTrang.pageSize
+  dsDoUong.value = items.slice(start, start + phanTrang.pageSize)
+  phanTrang.totalItems = totalItems
+  phanTrang.totalPages = totalPages
 }
 
 async function doiTrang(page) {
   phanTrang.page = page
-  await taiDuLieu()
+  apDungBoLoc(false)
 }
 
 async function layTatCaDoUong() {

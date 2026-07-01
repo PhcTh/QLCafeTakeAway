@@ -8,7 +8,15 @@
       <div class="thanh-cong-cu">
         <div class="khu-tim-kiem">
           <input v-model="tuKhoa" type="text" placeholder="Nhập mã, tên hoặc số điện thoại">
-          <button @click="taiDuLieu">Tìm kiếm</button>
+          <button @click="timKiem">Tìm kiếm</button>
+        </div>
+
+        <div class="khu-bo-loc">
+          <select v-model="boLoc.gioiTinh" @change="apDungBoLoc()">
+            <option value="">Tất cả giới tính</option>
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+          </select>
         </div>
 
         <div class="khu-nut">
@@ -84,6 +92,12 @@
           </tr>
         </tbody>
       </table>
+
+      <div v-if="phanTrang.totalPages > 0" class="khu-nut form-actions khu-phan-trang">
+        <button :disabled="phanTrang.page <= 1" @click="doiTrang(phanTrang.page - 1)">Trước</button>
+        <span>Trang {{ phanTrang.page }} / {{ phanTrang.totalPages }}</span>
+        <button :disabled="phanTrang.page >= phanTrang.totalPages" @click="doiTrang(phanTrang.page + 1)">Sau</button>
+      </div>
     </div>
   </div>
 </template>
@@ -93,10 +107,20 @@ import { onMounted, reactive, ref } from 'vue'
 import { phpApi } from '../../api/phpApi'
 
 const dsKhachHang = ref([])
+const tatCaKhachHang = ref([])
 const tuKhoa = ref('')
 const thongBao = ref('')
 const coLoi = ref(false)
 const dangSua = ref(false)
+const phanTrang = reactive({
+  page: 1,
+  pageSize: 5,
+  totalItems: 0,
+  totalPages: 0
+})
+const boLoc = reactive({
+  gioiTinh: ''
+})
 
 const form = reactive({
   maKh: '',
@@ -110,21 +134,29 @@ onMounted(taiDuLieu)
 
 async function taiDuLieu() {
   try {
-    dsKhachHang.value = await phpApi.getKhachHang(tuKhoa.value)
+    const response = await phpApi.getKhachHang(tuKhoa.value)
+    tatCaKhachHang.value = Array.isArray(response) ? response : response.items || []
+    apDungBoLoc(false)
     baoThanhCong('Tải dữ liệu khách hàng từ backend PHP thành công.')
   } catch (error) {
     baoLoi(error.message)
   }
 }
 
+async function timKiem() {
+  phanTrang.page = 1
+  await taiDuLieu()
+}
+
 async function batDauThem() {
   dangSua.value = false
   if (tuKhoa.value) {
     tuKhoa.value = ''
+    phanTrang.page = 1
     await taiDuLieu()
   }
   ganForm()
-  form.maKh = taoMaKhachHang()
+  form.maKh = await taoMaKhachHang()
   thongBao.value = ''
 }
 
@@ -168,6 +200,8 @@ async function xoaDuLieu(maKh) {
 
 function lamMoi() {
   tuKhoa.value = ''
+  phanTrang.page = 1
+  boLoc.gioiTinh = ''
   ganForm()
   dangSua.value = false
   taiDuLieu()
@@ -186,8 +220,8 @@ function ganForm(kh = null) {
   form.gioiTinh = kh?.gioiTinh || ''
 }
 
-function taoMaKhachHang() {
-  return taoMaTiepTheo(dsKhachHang.value, 'maKh', 'KH')
+async function taoMaKhachHang() {
+  return taoMaTiepTheo(await layTatCaKhachHang(), 'maKh', 'KH')
 }
 
 function taoMaTiepTheo(items, field, prefix) {
@@ -197,6 +231,36 @@ function taoMaTiepTheo(items, field, prefix) {
   }, 0)
 
   return `${prefix}${String(max + 1).padStart(3, '0')}`
+}
+
+function apDungBoLoc(resetPage = true) {
+  if (resetPage) phanTrang.page = 1
+  ganDuLieuPhanTrang(tatCaKhachHang.value.filter(locKhachHang))
+}
+
+function locKhachHang(kh) {
+  return !boLoc.gioiTinh || kh.gioiTinh === boLoc.gioiTinh
+}
+
+function ganDuLieuPhanTrang(items) {
+  const totalItems = items.length
+  const totalPages = totalItems ? Math.ceil(totalItems / phanTrang.pageSize) : 0
+  if (phanTrang.page > totalPages) phanTrang.page = totalPages || 1
+
+  const start = (phanTrang.page - 1) * phanTrang.pageSize
+  dsKhachHang.value = items.slice(start, start + phanTrang.pageSize)
+  phanTrang.totalItems = totalItems
+  phanTrang.totalPages = totalPages
+}
+
+async function doiTrang(page) {
+  phanTrang.page = page
+  apDungBoLoc(false)
+}
+
+async function layTatCaKhachHang() {
+  const response = await phpApi.getKhachHang('')
+  return Array.isArray(response) ? response : response.items || []
 }
 
 function baoThanhCong(message) {

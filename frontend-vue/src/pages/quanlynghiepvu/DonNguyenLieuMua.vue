@@ -59,7 +59,7 @@
         </tbody>
       </table>
 
-      <div v-if="phanTrang.totalPages > 1" class="khu-nut form-actions">
+      <div v-if="phanTrang.totalPages > 0" class="khu-nut form-actions khu-phan-trang">
         <button :disabled="phanTrang.page <= 1" @click="doiTrang(phanTrang.page - 1)">Trước</button>
         <span>Trang {{ phanTrang.page }} / {{ phanTrang.totalPages }}</span>
         <button :disabled="phanTrang.page >= phanTrang.totalPages" @click="doiTrang(phanTrang.page + 1)">Sau</button>
@@ -277,7 +277,7 @@ const dangSua = ref(false)
 const donDangXem = ref(null)
 const phanTrang = reactive({
   page: 1,
-  pageSize: 10,
+  pageSize: 5,
   totalItems: 0,
   totalPages: 0
 })

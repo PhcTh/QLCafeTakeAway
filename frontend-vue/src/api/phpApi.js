@@ -49,8 +49,8 @@ async function request(path, options = {}) {
 }
 
 export const phpApi = {
-  getKhachHang(keyword = "") {
-    return request(`/khach-hang${buildQuery(keyword)}`);
+  getKhachHang(keyword = "", paging = null) {
+    return request(`/khach-hang${buildQuery({ keyword, ...(paging || {}) })}`);
   },
 
   createKhachHang(data) {
@@ -73,8 +73,8 @@ export const phpApi = {
     });
   },
 
-  getNhaCungCap(keyword = "") {
-    return request(`/nha-cung-cap${buildQuery(keyword)}`);
+  getNhaCungCap(keyword = "", paging = null) {
+    return request(`/nha-cung-cap${buildQuery({ keyword, ...(paging || {}) })}`);
   },
 
   createNhaCungCap(data) {
@@ -98,9 +98,22 @@ export const phpApi = {
   }
 };
 
-function buildQuery(keyword) {
-  const value = keyword.trim();
-  return value ? `?keyword=${encodeURIComponent(value)}` : "";
+function buildQuery(params = {}) {
+  if (typeof params === "string") {
+    params = { keyword: params };
+  }
+
+  const searchParams = new URLSearchParams();
+
+  for (const [key, rawValue] of Object.entries(params)) {
+    if (rawValue === null || rawValue === undefined || rawValue === "") continue;
+    const value = typeof rawValue === "string" ? rawValue.trim() : rawValue;
+    if (value === "") continue;
+    searchParams.set(key, value);
+  }
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
 }
 
 function buildUrl(path) {

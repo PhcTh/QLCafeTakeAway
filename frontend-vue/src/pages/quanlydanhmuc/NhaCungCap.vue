@@ -8,7 +8,17 @@
       <div class="thanh-cong-cu">
         <div class="khu-tim-kiem">
           <input v-model="tuKhoa" type="text" placeholder="Nhập mã, tên hoặc số điện thoại">
-          <button @click="taiDuLieu">Tìm kiếm</button>
+          <button @click="timKiem">Tìm kiếm</button>
+        </div>
+
+        <div class="khu-bo-loc">
+          <select v-model="boLoc.lienHe" @change="apDungBoLoc()">
+            <option value="">Tất cả liên hệ</option>
+            <option value="co-sdt">Có số điện thoại</option>
+            <option value="thieu-sdt">Thiếu số điện thoại</option>
+            <option value="co-dia-chi">Có địa chỉ</option>
+            <option value="thieu-dia-chi">Thiếu địa chỉ</option>
+          </select>
         </div>
 
         <div class="khu-nut">
@@ -73,6 +83,12 @@
           </tr>
         </tbody>
       </table>
+
+      <div v-if="phanTrang.totalPages > 0" class="khu-nut form-actions khu-phan-trang">
+        <button :disabled="phanTrang.page <= 1" @click="doiTrang(phanTrang.page - 1)">Trước</button>
+        <span>Trang {{ phanTrang.page }} / {{ phanTrang.totalPages }}</span>
+        <button :disabled="phanTrang.page >= phanTrang.totalPages" @click="doiTrang(phanTrang.page + 1)">Sau</button>
+      </div>
     </div>
   </div>
 </template>
@@ -82,10 +98,20 @@ import { onMounted, reactive, ref } from 'vue'
 import { phpApi } from '../../api/phpApi'
 
 const dsNhaCungCap = ref([])
+const tatCaNhaCungCap = ref([])
 const tuKhoa = ref('')
 const thongBao = ref('')
 const coLoi = ref(false)
 const dangSua = ref(false)
+const phanTrang = reactive({
+  page: 1,
+  pageSize: 5,
+  totalItems: 0,
+  totalPages: 0
+})
+const boLoc = reactive({
+  lienHe: ''
+})
 
 const form = reactive({
   maNcc: '',
@@ -98,21 +124,29 @@ onMounted(taiDuLieu)
 
 async function taiDuLieu() {
   try {
-    dsNhaCungCap.value = await phpApi.getNhaCungCap(tuKhoa.value)
+    const response = await phpApi.getNhaCungCap(tuKhoa.value)
+    tatCaNhaCungCap.value = Array.isArray(response) ? response : response.items || []
+    apDungBoLoc(false)
     baoThanhCong('Tải dữ liệu nhà cung cấp từ backend PHP thành công.')
   } catch (error) {
     baoLoi(error.message)
   }
 }
 
+async function timKiem() {
+  phanTrang.page = 1
+  await taiDuLieu()
+}
+
 async function batDauThem() {
   dangSua.value = false
   if (tuKhoa.value) {
     tuKhoa.value = ''
+    phanTrang.page = 1
     await taiDuLieu()
   }
   ganForm()
-  form.maNcc = taoMaNhaCungCap()
+  form.maNcc = await taoMaNhaCungCap()
   thongBao.value = ''
 }
 
@@ -156,6 +190,8 @@ async function xoaDuLieu(maNcc) {
 
 function lamMoi() {
   tuKhoa.value = ''
+  phanTrang.page = 1
+  boLoc.lienHe = ''
   ganForm()
   dangSua.value = false
   taiDuLieu()
@@ -173,8 +209,8 @@ function ganForm(ncc = null) {
   form.soDienThoaiNcc = ncc?.soDienThoaiNcc || ''
 }
 
-function taoMaNhaCungCap() {
-  return taoMaTiepTheo(dsNhaCungCap.value, 'maNcc', 'NCC')
+async function taoMaNhaCungCap() {
+  return taoMaTiepTheo(await layTatCaNhaCungCap(), 'maNcc', 'NCC')
 }
 
 function taoMaTiepTheo(items, field, prefix) {
@@ -184,6 +220,43 @@ function taoMaTiepTheo(items, field, prefix) {
   }, 0)
 
   return `${prefix}${String(max + 1).padStart(3, '0')}`
+}
+
+function apDungBoLoc(resetPage = true) {
+  if (resetPage) phanTrang.page = 1
+  ganDuLieuPhanTrang(tatCaNhaCungCap.value.filter(locNhaCungCap))
+}
+
+function locNhaCungCap(ncc) {
+  const coSdt = Boolean(String(ncc.soDienThoaiNcc || '').trim())
+  const coDiaChi = Boolean(String(ncc.diaChiNcc || '').trim())
+
+  return !boLoc.lienHe
+    || (boLoc.lienHe === 'co-sdt' && coSdt)
+    || (boLoc.lienHe === 'thieu-sdt' && !coSdt)
+    || (boLoc.lienHe === 'co-dia-chi' && coDiaChi)
+    || (boLoc.lienHe === 'thieu-dia-chi' && !coDiaChi)
+}
+
+function ganDuLieuPhanTrang(items) {
+  const totalItems = items.length
+  const totalPages = totalItems ? Math.ceil(totalItems / phanTrang.pageSize) : 0
+  if (phanTrang.page > totalPages) phanTrang.page = totalPages || 1
+
+  const start = (phanTrang.page - 1) * phanTrang.pageSize
+  dsNhaCungCap.value = items.slice(start, start + phanTrang.pageSize)
+  phanTrang.totalItems = totalItems
+  phanTrang.totalPages = totalPages
+}
+
+async function doiTrang(page) {
+  phanTrang.page = page
+  apDungBoLoc(false)
+}
+
+async function layTatCaNhaCungCap() {
+  const response = await phpApi.getNhaCungCap('')
+  return Array.isArray(response) ? response : response.items || []
 }
 
 function baoThanhCong(message) {
