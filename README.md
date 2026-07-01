@@ -134,15 +134,4 @@ http://127.0.0.1:5173/
 | Nhân viên pha chế | Cập nhật menu, nhập hàng, kiểm kê |
 | Người quản trị | Toàn bộ quyền trong hệ thống |
 
-## Tài liệu thêm
 
-Một số tài liệu trong thư mục `docs/`:
-
-- `docs/demo_full_project.md`: hướng dẫn demo toàn bộ project.
-- `docs/project_code_walkthrough.md`: giải thích luồng code chính.
-- `docs/csharp_backend_guide.md`: hướng dẫn backend C#.
-- `docs/offline_preflight_check.md`: checklist kiểm tra trước khi demo.
-
-## Ghi chú
-
-Project dùng dữ liệu mẫu để phục vụ học tập và demo. Khi chạy trên máy khác, cần kiểm tra lại SQL Server, connection string, port backend và biến môi trường frontend nếu có thay đổi.
