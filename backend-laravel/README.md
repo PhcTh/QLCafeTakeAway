@@ -82,3 +82,18 @@ Nhà cung cấp:
 - `POST /api/nha-cung-cap`
 - `PUT /api/nha-cung-cap/{maNcc}`
 - `DELETE /api/nha-cung-cap/{maNcc}`
+
+## Endpoint tuong thich ban Laravel trong `QLBH_TAKEAWAY.rar`
+
+File RAR cua nhom ban co mot Laravel app day du voi controller cho khach hang, nha cung cap, nguoi dung, nhom nguoi dung va dang nhap. De khong lam hong luong demo hien tai, project nay khong copy `vendor`, `node_modules`, cache/session hay thay proxy bang Laravel full app. Thay vao do, `api.php` ho tro them cac route tuong thich va van proxy sang C#:
+
+- `POST /api/dang-nhap`
+- `GET /api/khach-hang/ma-moi`
+- `GET /api/nha-cung-cap/ma-moi`
+- `GET /api/nguoi-dung`
+- `GET /api/nguoi-dung/ma-moi`
+- `GET /api/nguoi-dung/nhom`
+- `GET /api/nhom-nguoi-dung`
+- `GET /api/nhom-nguoi-dung/ma-moi`
+
+Proxy chap nhan ca ten field kieu Laravel cu nhu `ma_kh`, `tenkhachhang`, `tennhacungcap`, `ma_nd`, `usr`, `pwd_hash` va tu chuyen sang payload C# hien tai. Cac thao tac yeu cau dang nhap/quyen van can header `Authorization: Bearer <token>` nhu backend C#.
