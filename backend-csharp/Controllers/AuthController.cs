@@ -19,6 +19,8 @@ public sealed class AuthController : ControllerBase
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request)
     {
         var result = await _service.LoginAsync(request);
-        return result is null ? Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." }) : Ok(result);
+        return result is null
+            ? Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng.", status = 401 })
+            : Ok(result);
     }
 }
