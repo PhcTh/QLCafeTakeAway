@@ -1,11 +1,14 @@
 using backend_csharp.Models;
+using backend_csharp.Security;
 using backend_csharp.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend_csharp.Controllers;
 
 [ApiController]
 [Route("api/phieu-goi-do-uong")]
+[Authorize(Policy = AuthorizationPolicies.CreateDrinkOrder)]
 public sealed class PhieuGoiDoUongController : ControllerBase
 {
     private readonly SalesService _service;
@@ -38,7 +41,7 @@ public sealed class PhieuGoiDoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -51,7 +54,7 @@ public sealed class PhieuGoiDoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -64,6 +67,7 @@ public sealed class PhieuGoiDoUongController : ControllerBase
 
 [ApiController]
 [Route("api/hoa-don")]
+[Authorize(Policy = AuthorizationPolicies.CreateInvoice)]
 public sealed class HoaDonController : ControllerBase
 {
     private readonly SalesService _service;
@@ -96,7 +100,7 @@ public sealed class HoaDonController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -106,3 +110,5 @@ public sealed class HoaDonController : ControllerBase
         return await _service.DeleteHoaDonAsync(id) ? NoContent() : NotFound();
     }
 }
+
+ 

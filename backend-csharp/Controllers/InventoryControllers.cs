@@ -1,11 +1,14 @@
 using backend_csharp.Models;
+using backend_csharp.Security;
 using backend_csharp.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend_csharp.Controllers;
 
 [ApiController]
 [Route("api/don-nguyen-lieu-mua")]
+[Authorize(Policy = AuthorizationPolicies.PurchaseOrder)]
 public sealed class DonNguyenLieuMuaController : ControllerBase
 {
     private readonly InventoryService _service;
@@ -16,9 +19,9 @@ public sealed class DonNguyenLieuMuaController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<DonNguyenLieuMuaDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetDonNguyenLieuMuaAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetDonNguyenLieuMuaAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -38,7 +41,7 @@ public sealed class DonNguyenLieuMuaController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -51,7 +54,7 @@ public sealed class DonNguyenLieuMuaController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -64,13 +67,27 @@ public sealed class DonNguyenLieuMuaController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
+        }
+    }
+
+    [HttpPut("{id}/trang-thai")]
+    public async Task<IActionResult> UpdateTrangThai(string id, UpdateTrangThaiDonNguyenLieuMuaRequest request)
+    {
+        try
+        {
+            return await _service.UpdateTrangThaiDonNguyenLieuMuaAsync(id, request) ? NoContent() : NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 }
 
 [ApiController]
 [Route("api/phieu-nhap-hang")]
+[Authorize(Policy = AuthorizationPolicies.ReceiveInventory)]
 public sealed class PhieuNhapHangController : ControllerBase
 {
     private readonly InventoryService _service;
@@ -103,7 +120,7 @@ public sealed class PhieuNhapHangController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -116,6 +133,7 @@ public sealed class PhieuNhapHangController : ControllerBase
 
 [ApiController]
 [Route("api/phieu-kiem-ke")]
+[Authorize(Policy = AuthorizationPolicies.InventoryCheck)]
 public sealed class PhieuKiemKeController : ControllerBase
 {
     private readonly InventoryService _service;
@@ -148,7 +166,7 @@ public sealed class PhieuKiemKeController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 

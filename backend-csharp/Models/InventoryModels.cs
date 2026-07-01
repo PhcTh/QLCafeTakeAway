@@ -12,6 +12,7 @@ public sealed record DonNguyenLieuMuaDto(
     string? QuanLy,
     string TenNhanVien,
     string MaNd,
+    string TrangThai,
     IReadOnlyList<ChiTietDonNguyenLieuMuaDto> ChiTiet);
 // Từng nguyên liệu trong đơn đề nghị mua nguyên liệu
 public sealed record ChiTietDonNguyenLieuMuaDto(
@@ -34,7 +35,10 @@ public sealed record CreateDonNguyenLieuMuaRequest(
     string? QuanLy,
     string TenNhanVien,
     string MaNd,
+    string? TrangThai,
     IReadOnlyList<CreateChiTietDonNguyenLieuMuaRequest> ChiTiet);
+
+public sealed record UpdateTrangThaiDonNguyenLieuMuaRequest(string TrangThai);
 public sealed record CreateChiTietDonNguyenLieuMuaRequest(
     string MaNl,
     int SoLuongDeNghi,

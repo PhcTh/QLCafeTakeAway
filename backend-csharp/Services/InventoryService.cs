@@ -6,6 +6,14 @@ namespace backend_csharp.Services;
 
 public sealed class InventoryService
 {
+    private static readonly HashSet<string> TrangThaiDonHopLe = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "MoiLap",
+        "DaGuiNCC",
+        "DaNhapHang",
+        "DaHuy"
+    };
+
     private readonly DbConnectionFactory _db;
 
     public InventoryService(DbConnectionFactory db)
@@ -25,6 +33,7 @@ public sealed class InventoryService
                OR so_dnlm LIKE @like
                OR nhacungcap LIKE @like
                OR nguoilapdon LIKE @like
+               OR trangthai LIKE @like
             ORDER BY ngaylapdon DESC, so_dnlm DESC
             """;
 
@@ -54,7 +63,7 @@ public sealed class InventoryService
 
         const string headerSql = """
             SELECT so_dnlm, ngaylapdon, nhacungcap, diachi, sodienthoai,
-                   bophan, ghichu, nguoilapdon, quanly, tennd, ma_nd
+                   bophan, ghichu, nguoilapdon, quanly, tennd, ma_nd, trangthai
             FROM D_NLM
             WHERE so_dnlm = @so_dnlm
             """;
@@ -75,7 +84,8 @@ public sealed class InventoryService
                 NguoiLapDon = reader.GetString("nguoilapdon"),
                 QuanLy = reader.GetNullableString("quanly"),
                 TenNhanVien = reader.GetString("tennd"),
-                MaNd = reader.GetString("ma_nd")
+                MaNd = reader.GetString("ma_nd"),
+                TrangThai = reader.GetString("trangthai")
             });
 
         var header = headers.FirstOrDefault();
@@ -97,6 +107,7 @@ public sealed class InventoryService
             header.QuanLy,
             header.TenNhanVien,
             header.MaNd,
+            header.TrangThai,
             details);
     }
 
@@ -109,6 +120,7 @@ public sealed class InventoryService
         EnsureRequired(request.TenNhanVien, nameof(request.TenNhanVien));
         EnsureRequired(request.MaNd, nameof(request.MaNd));
         EnsureHasDetails(request.ChiTiet.Count, "Purchase request requires at least one ingredient detail.");
+        var trangThai = NormalizeTrangThai(string.IsNullOrWhiteSpace(request.TrangThai) ? "MoiLap" : request.TrangThai);
 
         await using var connection = _db.Create();
         await connection.OpenAsync();
@@ -119,10 +131,10 @@ public sealed class InventoryService
             const string headerSql = """
                 INSERT INTO D_NLM
                     (so_dnlm, ngaylapdon, nhacungcap, diachi, sodienthoai, bophan,
-                     ghichu, nguoilapdon, quanly, tennd, ma_nd)
+                     ghichu, nguoilapdon, quanly, tennd, ma_nd, trangthai)
                 VALUES
                     (@so_dnlm, @ngaylapdon, @nhacungcap, @diachi, @sodienthoai, @bophan,
-                     @ghichu, @nguoilapdon, @quanly, @tennd, @ma_nd)
+                     @ghichu, @nguoilapdon, @quanly, @tennd, @ma_nd, @trangthai)
                 """;
 
             await SqlHelpers.ExecuteAsync(connection, headerSql, cmd =>
@@ -138,6 +150,7 @@ public sealed class InventoryService
                 cmd.AddParam("@quanly", request.QuanLy);
                 cmd.AddParam("@tennd", request.TenNhanVien);
                 cmd.AddParam("@ma_nd", request.MaNd);
+                cmd.AddParam("@trangthai", trangThai);
             }, transaction);
 
             const string detailSql = """
@@ -183,6 +196,16 @@ public sealed class InventoryService
 
         try
         {
+            var currentTrangThai = await GetDonTrangThaiAsync(connection, transaction, soDnlm);
+            if (currentTrangThai is null)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            EnsureDonCoTheSua(currentTrangThai);
+            var trangThai = NormalizeTrangThai(string.IsNullOrWhiteSpace(request.TrangThai) ? currentTrangThai : request.TrangThai);
+
             const string updateSql = """
                 UPDATE D_NLM
                 SET ngaylapdon = @ngaylapdon,
@@ -194,7 +217,8 @@ public sealed class InventoryService
                     nguoilapdon = @nguoilapdon,
                     quanly = @quanly,
                     tennd = @tennd,
-                    ma_nd = @ma_nd
+                    ma_nd = @ma_nd,
+                    trangthai = @trangthai
                 WHERE so_dnlm = @so_dnlm
                 """;
 
@@ -211,6 +235,7 @@ public sealed class InventoryService
                 cmd.AddParam("@quanly", request.QuanLy);
                 cmd.AddParam("@tennd", request.TenNhanVien);
                 cmd.AddParam("@ma_nd", request.MaNd);
+                cmd.AddParam("@trangthai", trangThai);
             }, transaction);
 
             if (affected == 0)
@@ -262,6 +287,41 @@ public sealed class InventoryService
             "DELETE FROM C_T_DNLMUA WHERE so_dnlm = @id",
             "DELETE FROM D_NLM WHERE so_dnlm = @id",
             soDnlm);
+    }
+
+    public async Task<bool> UpdateTrangThaiDonNguyenLieuMuaAsync(string soDnlm, UpdateTrangThaiDonNguyenLieuMuaRequest request)
+    {
+        var trangThaiMoi = NormalizeTrangThai(request.TrangThai);
+
+        await using var connection = _db.Create();
+        await connection.OpenAsync();
+
+        var currentTrangThai = await GetDonTrangThaiAsync(connection, null, soDnlm);
+        if (currentTrangThai is null)
+        {
+            return false;
+        }
+
+        var hasReceipt = await HasPhieuNhapHangAsync(connection, null, soDnlm);
+        if (hasReceipt && !trangThaiMoi.Equals("DaNhapHang", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Don nay da co phieu nhap hang nen trang thai phai la DaNhapHang.");
+        }
+
+        if (currentTrangThai.Equals("DaNhapHang", StringComparison.OrdinalIgnoreCase) &&
+            !trangThaiMoi.Equals("DaNhapHang", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Don da nhap hang khong duoc chuyen ve trang thai khac.");
+        }
+
+        const string sql = "UPDATE D_NLM SET trangthai = @trangthai WHERE so_dnlm = @so_dnlm";
+        var affected = await SqlHelpers.ExecuteAsync(connection, sql, cmd =>
+        {
+            cmd.AddParam("@so_dnlm", soDnlm);
+            cmd.AddParam("@trangthai", trangThaiMoi);
+        });
+
+        return affected > 0;
     }
 
     public async Task<IReadOnlyList<PhieuNhapHangDto>> GetPhieuNhapHangAsync(string? keyword)
@@ -435,6 +495,12 @@ public sealed class InventoryService
                     cmd.AddParam("@ghichu", detail.GhiChu);
                 }, transaction);
             }
+
+            await SqlHelpers.ExecuteAsync(
+                connection,
+                "UPDATE D_NLM SET trangthai = 'DaNhapHang' WHERE so_dnlm = @so_dnlm",
+                cmd => cmd.AddParam("@so_dnlm", request.SoDnlm),
+                transaction);
 
             await transaction.CommitAsync();
         }
@@ -733,6 +799,17 @@ public sealed class InventoryService
         await using var connection = _db.Create();
         await connection.OpenAsync();
 
+        var trangThai = await GetDonTrangThaiAsync(connection, null, soDnlm);
+        if (trangThai is null)
+        {
+            return;
+        }
+
+        if (trangThai.Equals("DaNhapHang", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Don da nhap hang khong duoc xoa.");
+        }
+
         const string sql = "SELECT COUNT(1) FROM P_NH WHERE so_dnlm = @id";
         var count = await SqlHelpers.ScalarAsync<int>(
             connection,
@@ -742,6 +819,45 @@ public sealed class InventoryService
         if (count > 0)
         {
             throw new ArgumentException("Không thể xóa đơn nguyên liệu mua này vì đã có phiếu nhập hàng liên quan.");
+        }
+    }
+
+    private static async Task<string?> GetDonTrangThaiAsync(SqlConnection connection, SqlTransaction? transaction, string soDnlm)
+    {
+        return await SqlHelpers.ScalarAsync<string>(
+            connection,
+            "SELECT trangthai FROM D_NLM WHERE so_dnlm = @so_dnlm",
+            cmd => cmd.AddParam("@so_dnlm", soDnlm),
+            transaction);
+    }
+
+    private static async Task<bool> HasPhieuNhapHangAsync(SqlConnection connection, SqlTransaction? transaction, string soDnlm)
+    {
+        var count = await SqlHelpers.ScalarAsync<int>(
+            connection,
+            "SELECT COUNT(1) FROM P_NH WHERE so_dnlm = @so_dnlm",
+            cmd => cmd.AddParam("@so_dnlm", soDnlm),
+            transaction);
+
+        return count > 0;
+    }
+
+    private static string NormalizeTrangThai(string? trangThai)
+    {
+        var normalized = string.IsNullOrWhiteSpace(trangThai) ? "MoiLap" : trangThai.Trim();
+        if (!TrangThaiDonHopLe.Contains(normalized))
+        {
+            throw new ArgumentException("Trang thai don nguyen lieu mua khong hop le.");
+        }
+
+        return TrangThaiDonHopLe.First(x => x.Equals(normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void EnsureDonCoTheSua(string trangThai)
+    {
+        if (trangThai.Equals("DaNhapHang", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Don da nhap hang khong duoc sua.");
         }
     }
 

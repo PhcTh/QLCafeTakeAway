@@ -1,11 +1,14 @@
 using backend_csharp.Models;
+using backend_csharp.Security;
 using backend_csharp.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend_csharp.Controllers;
 
 [ApiController] // Đánh dấu đây là API controller, giúp ASP.NET Core tự động xử lý các yêu cầu HTTP và trả về dữ liệu JSON
 [Route("api/loai-do-uong")] // url gốc của controller
+[Authorize]
 public sealed class LoaiDoUongController : ControllerBase
 {
     private readonly CatalogService _service; //service để gọi các hàm xử lý nghiệp vụ
@@ -16,9 +19,9 @@ public sealed class LoaiDoUongController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<LoaiDoUongDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetLoaiDoUongAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetLoaiDoUongAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -29,6 +32,7 @@ public sealed class LoaiDoUongController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Create(UpsertLoaiDoUongRequest request)
     {
         try
@@ -38,11 +42,12 @@ public sealed class LoaiDoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Update(string id, UpsertLoaiDoUongRequest request)
     {
         try
@@ -51,11 +56,12 @@ public sealed class LoaiDoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Delete(string id)
     {
         try
@@ -64,13 +70,14 @@ public sealed class LoaiDoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 }
 
 [ApiController]
 [Route("api/do-uong")]
+[Authorize]
 public sealed class DoUongController : ControllerBase
 {
     private readonly CatalogService _service;
@@ -81,9 +88,9 @@ public sealed class DoUongController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<DoUongDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetDoUongAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetDoUongAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -94,6 +101,7 @@ public sealed class DoUongController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Create(UpsertDoUongRequest request)
     {
         try
@@ -103,11 +111,12 @@ public sealed class DoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Update(string id, UpsertDoUongRequest request)
     {
         try
@@ -116,11 +125,12 @@ public sealed class DoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Delete(string id)
     {
         try
@@ -129,13 +139,14 @@ public sealed class DoUongController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 }
 
 [ApiController]
 [Route("api/nguyen-lieu")]
+[Authorize]
 public sealed class NguyenLieuController : ControllerBase
 {
     private readonly CatalogService _service;
@@ -146,9 +157,9 @@ public sealed class NguyenLieuController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<NguyenLieuDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetNguyenLieuAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetNguyenLieuAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -159,6 +170,7 @@ public sealed class NguyenLieuController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Create(UpsertNguyenLieuRequest request)
     {
         try
@@ -168,11 +180,12 @@ public sealed class NguyenLieuController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Update(string id, UpsertNguyenLieuRequest request)
     {
         try
@@ -181,11 +194,12 @@ public sealed class NguyenLieuController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ManageCatalog)]
     public async Task<IActionResult> Delete(string id)
     {
         try
@@ -194,13 +208,14 @@ public sealed class NguyenLieuController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 }
 
 [ApiController]
 [Route("api/khach-hang")]
+[Authorize]
 public sealed class KhachHangController : ControllerBase
 {
     private readonly CatalogService _service;
@@ -211,9 +226,9 @@ public sealed class KhachHangController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<KhachHangDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetKhachHangAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetKhachHangAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -233,7 +248,7 @@ public sealed class KhachHangController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -246,7 +261,7 @@ public sealed class KhachHangController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -259,13 +274,14 @@ public sealed class KhachHangController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 }
 
 [ApiController]
 [Route("api/nha-cung-cap")]
+[Authorize]
 public sealed class NhaCungCapController : ControllerBase
 {
     private readonly CatalogService _service;
@@ -276,9 +292,9 @@ public sealed class NhaCungCapController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<NhaCungCapDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetNhaCungCapAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetNhaCungCapAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -298,7 +314,7 @@ public sealed class NhaCungCapController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -311,7 +327,7 @@ public sealed class NhaCungCapController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -324,13 +340,14 @@ public sealed class NhaCungCapController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 }
 
 [ApiController]
 [Route("api/nguoi-dung")]
+[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public sealed class NguoiDungController : ControllerBase
 {
     private readonly CatalogService _service;
@@ -341,9 +358,9 @@ public sealed class NguoiDungController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<NguoiDungDto>>> GetAll([FromQuery] string? keyword)
+    public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        return Ok(await _service.GetNguoiDungAsync(keyword));
+        return Ok(ApiPaging.Shape(await _service.GetNguoiDungAsync(keyword), page, pageSize));
     }
 
     [HttpGet("{id}")]
@@ -363,7 +380,7 @@ public sealed class NguoiDungController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -376,7 +393,7 @@ public sealed class NguoiDungController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message, status = 400 });
         }
     }
 
@@ -389,6 +406,7 @@ public sealed class NguoiDungController : ControllerBase
 
 [ApiController]
 [Route("api/nhom-nguoi-dung")]
+[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public sealed class NhomNguoiDungController : ControllerBase
 {
     private readonly CatalogService _service;
@@ -402,5 +420,15 @@ public sealed class NhomNguoiDungController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<NhomNguoiDungDto>>> GetAll([FromQuery] string? keyword)
     {
         return Ok(await _service.GetNhomNguoiDungAsync(keyword));
+    }
+}
+
+internal static class ApiPaging
+{
+    public static object Shape<T>(IReadOnlyList<T> items, int? page, int? pageSize)
+    {
+        return page.HasValue || pageSize.HasValue
+            ? Pagination.Create(items, page ?? 1, pageSize ?? 10)
+            : items;
     }
 }

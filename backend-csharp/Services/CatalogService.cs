@@ -1,5 +1,6 @@
 using backend_csharp.Data;
 using backend_csharp.Models;
+using backend_csharp.Security;
 
 namespace backend_csharp.Services;
 
@@ -20,9 +21,10 @@ public sealed class CatalogService
         const string sql = """
             SELECT ma_ldu, tenloaidouong, mota
             FROM LDU
-            WHERE @keyword IS NULL
+            WHERE trangthai = 1
+              AND (@keyword IS NULL
                OR ma_ldu LIKE @like
-               OR tenloaidouong LIKE @like
+               OR tenloaidouong LIKE @like)
             ORDER BY ma_ldu
             """;
 
@@ -74,7 +76,7 @@ public sealed class CatalogService
             UPDATE LDU
             SET tenloaidouong = @tenloaidouong,
                 mota = @mota
-            WHERE ma_ldu = @ma_ldu
+            WHERE ma_ldu = @ma_ldu AND trangthai = 1
             """;
 
         var affected = await SqlHelpers.ExecuteAsync(connection, sql, cmd =>
@@ -90,10 +92,10 @@ public sealed class CatalogService
     public Task<bool> DeleteLoaiDoUongAsync(string id)
     {
         return DeleteWithChecksAsync(
-            "DELETE FROM LDU WHERE ma_ldu = @id",
+            "UPDATE LDU SET trangthai = 0 WHERE ma_ldu = @id AND trangthai = 1",
             id,
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM DU WHERE ma_ldu = @id",
+                "SELECT COUNT(1) FROM DU WHERE ma_ldu = @id AND trangthai = 1",
                 "Không thể xóa loại đồ uống này vì vẫn còn đồ uống thuộc loại này."));
     }
 
@@ -106,10 +108,12 @@ public sealed class CatalogService
             SELECT du.ma_du, du.ma_ldu, ldu.tenloaidouong, du.tendouong, du.dongia
             FROM DU du
             INNER JOIN LDU ldu ON ldu.ma_ldu = du.ma_ldu
-            WHERE @keyword IS NULL
+            WHERE du.trangthai = 1
+              AND ldu.trangthai = 1
+              AND (@keyword IS NULL
                OR du.ma_du LIKE @like
                OR du.tendouong LIKE @like
-               OR ldu.tenloaidouong LIKE @like
+               OR ldu.tenloaidouong LIKE @like)
             ORDER BY du.ma_du
             """;
 
@@ -129,7 +133,7 @@ public sealed class CatalogService
             SELECT du.ma_du, du.ma_ldu, ldu.tenloaidouong, du.tendouong, du.dongia
             FROM DU du
             INNER JOIN LDU ldu ON ldu.ma_ldu = du.ma_ldu
-            WHERE du.ma_du = @id
+            WHERE du.ma_du = @id AND du.trangthai = 1
             """;
 
         var rows = await SqlHelpers.QueryAsync(
@@ -179,7 +183,7 @@ public sealed class CatalogService
             SET ma_ldu = @ma_ldu,
                 tendouong = @tendouong,
                 dongia = @dongia
-            WHERE ma_du = @ma_du
+            WHERE ma_du = @ma_du AND trangthai = 1
             """;
 
         var affected = await SqlHelpers.ExecuteAsync(connection, sql, cmd =>
@@ -196,16 +200,16 @@ public sealed class CatalogService
     public Task<bool> DeleteDoUongAsync(string id)
     {
         return DeleteWithChecksAsync(
-            "DELETE FROM DU WHERE ma_du = @id",
+            "UPDATE DU SET trangthai = 0 WHERE ma_du = @id AND trangthai = 1",
             id,
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM C_T_HDBDU WHERE ma_du = @id",
+                "SELECT 0",
                 "Không thể xóa đồ uống này vì đã có trong hóa đơn bán hàng."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM C_T_PGDU WHERE ma_du = @id",
+                "SELECT 0",
                 "Không thể xóa đồ uống này vì đã có trong phiếu gọi đồ uống."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM DU_NL WHERE ma_du = @id",
+                "SELECT 0",
                 "Không thể xóa đồ uống này vì đang có khai báo nguyên liệu/công thức."));
     }
 
@@ -217,9 +221,10 @@ public sealed class CatalogService
         const string sql = """
             SELECT ma_nl, tennguyenlieu, donvitinh
             FROM NL
-            WHERE @keyword IS NULL
+            WHERE trangthai = 1
+              AND (@keyword IS NULL
                OR ma_nl LIKE @like
-               OR tennguyenlieu LIKE @like
+               OR tennguyenlieu LIKE @like)
             ORDER BY ma_nl
             """;
 
@@ -259,7 +264,7 @@ public sealed class CatalogService
         await using var connection = _db.Create();
         await connection.OpenAsync();
 
-        const string sql = "UPDATE NL SET tennguyenlieu = @tennguyenlieu, donvitinh = @donvitinh WHERE ma_nl = @ma_nl";
+        const string sql = "UPDATE NL SET tennguyenlieu = @tennguyenlieu, donvitinh = @donvitinh WHERE ma_nl = @ma_nl AND trangthai = 1";
         var affected = await SqlHelpers.ExecuteAsync(connection, sql, cmd =>
         {
             cmd.AddParam("@ma_nl", id);
@@ -273,19 +278,19 @@ public sealed class CatalogService
     public Task<bool> DeleteNguyenLieuAsync(string id)
     {
         return DeleteWithChecksAsync(
-            "DELETE FROM NL WHERE ma_nl = @id",
+            "UPDATE NL SET trangthai = 0 WHERE ma_nl = @id AND trangthai = 1",
             id,
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM C_T_DNLMUA WHERE ma_nl = @id",
+                "SELECT 0",
                 "Không thể xóa nguyên liệu này vì đã có trong đơn nguyên liệu mua."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM C_T_PNH WHERE ma_nl = @id",
+                "SELECT 0",
                 "Không thể xóa nguyên liệu này vì đã có trong phiếu nhập hàng."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM C_T_PKK WHERE ma_nl = @id",
+                "SELECT 0",
                 "Không thể xóa nguyên liệu này vì đã có trong phiếu kiểm kê."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM DU_NL WHERE ma_nl = @id",
+                "SELECT 0",
                 "Không thể xóa nguyên liệu này vì đang được dùng trong công thức đồ uống."));
     }
 
@@ -297,10 +302,11 @@ public sealed class CatalogService
         const string sql = """
             SELECT ma_kh, tenkhachhang, sodienthoai, diachi, gioitinh
             FROM K_H
-            WHERE @keyword IS NULL
+            WHERE trangthai = 1
+              AND (@keyword IS NULL
                OR ma_kh LIKE @like
                OR tenkhachhang LIKE @like
-               OR sodienthoai LIKE @like
+               OR sodienthoai LIKE @like)
             ORDER BY ma_kh
             """;
 
@@ -345,7 +351,7 @@ public sealed class CatalogService
                 sodienthoai = @sodienthoai,
                 diachi = @diachi,
                 gioitinh = @gioitinh
-            WHERE ma_kh = @ma_kh
+            WHERE ma_kh = @ma_kh AND trangthai = 1
             """;
 
         var affected = await SqlHelpers.ExecuteAsync(connection, sql, cmd => BindKhachHang(cmd, request, id));
@@ -355,13 +361,13 @@ public sealed class CatalogService
     public Task<bool> DeleteKhachHangAsync(string id)
     {
         return DeleteWithChecksAsync(
-            "DELETE FROM K_H WHERE ma_kh = @id",
+            "UPDATE K_H SET trangthai = 0 WHERE ma_kh = @id AND trangthai = 1",
             id,
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM P_G_DU WHERE ma_kh = @id",
+                "SELECT 0",
                 "Không thể xóa khách hàng này vì đã có phiếu gọi đồ uống."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM HD_BDUONG WHERE ma_khachhang = @id",
+                "SELECT 0",
                 "Không thể xóa khách hàng này vì đã có hóa đơn bán hàng."));
     }
 
@@ -373,10 +379,11 @@ public sealed class CatalogService
         const string sql = """
             SELECT ma_ncc, tennhacungcap, diachincc, sodienthoaincc
             FROM NCC
-            WHERE @keyword IS NULL
+            WHERE trangthai = 1
+              AND (@keyword IS NULL
                OR ma_ncc LIKE @like
                OR tennhacungcap LIKE @like
-               OR sodienthoaincc LIKE @like
+               OR sodienthoaincc LIKE @like)
             ORDER BY ma_ncc
             """;
 
@@ -419,7 +426,7 @@ public sealed class CatalogService
             SET tennhacungcap = @tennhacungcap,
                 diachincc = @diachincc,
                 sodienthoaincc = @sodienthoaincc
-            WHERE ma_ncc = @ma_ncc
+            WHERE ma_ncc = @ma_ncc AND trangthai = 1
             """;
 
         var affected = await SqlHelpers.ExecuteAsync(connection, sql, cmd => BindNhaCungCap(cmd, request, id));
@@ -429,13 +436,13 @@ public sealed class CatalogService
     public Task<bool> DeleteNhaCungCapAsync(string id)
     {
         return DeleteWithChecksAsync(
-            "DELETE FROM NCC WHERE ma_ncc = @id",
+            "UPDATE NCC SET trangthai = 0 WHERE ma_ncc = @id AND trangthai = 1",
             id,
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM P_NH WHERE ma_ncc = @id",
+                "SELECT 0",
                 "Không thể xóa nhà cung cấp này vì đã có phiếu nhập hàng."),
             new ReferenceCheck(
-                "SELECT COUNT(1) FROM P_KK WHERE ma_ncc = @id",
+                "SELECT 0",
                 "Không thể xóa nhà cung cấp này vì đã có phiếu kiểm kê."));
     }
 
@@ -620,7 +627,7 @@ public sealed class CatalogService
         cmd.AddParam("@tennd", request.TenNd);
         cmd.AddParam("@sdt", request.Sdt);
         cmd.AddParam("@usr", request.UserName);
-        cmd.AddParam("@pwd_hash", password);
+        cmd.AddParam("@pwd_hash", password is null ? null : PasswordHasher.Hash(password));
         cmd.AddParam("@vitri", request.ViTri);
         cmd.AddParam("@trangthai", request.TrangThai);
     }
