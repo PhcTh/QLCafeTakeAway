@@ -12,7 +12,7 @@
       <div class="thanh-cong-cu">
         <div class="khu-tim-kiem">
           <input v-model="tuKhoa" type="text" placeholder="Nhập mã, tên đồ uống hoặc loại">
-          <button @click="taiDuLieu"><span class="icon-nut">⌕</span>Tìm kiếm</button>
+          <button @click="timKiem"><span class="icon-nut">⌕</span>Tìm kiếm</button>
         </div>
 
         <div class="khu-nut">
@@ -54,6 +54,12 @@
           </tr>
         </tbody>
       </table>
+
+      <div v-if="phanTrang.totalPages > 1" class="khu-nut form-actions">
+        <button :disabled="phanTrang.page <= 1" @click="doiTrang(phanTrang.page - 1)">Trước</button>
+        <span>Trang {{ phanTrang.page }} / {{ phanTrang.totalPages }}</span>
+        <button :disabled="phanTrang.page >= phanTrang.totalPages" @click="doiTrang(phanTrang.page + 1)">Sau</button>
+      </div>
     </div>
 
     <div v-if="hopThoaiDangMo === 'form'" class="lop-phu" @click.self="dongHopThoai">
@@ -135,6 +141,12 @@ const coLoi = ref(false)
 const dangSua = ref(false)
 const hopThoaiDangMo = ref('')
 const dongDangXem = ref(null)
+const phanTrang = reactive({
+  page: 1,
+  pageSize: 10,
+  totalItems: 0,
+  totalPages: 0
+})
 
 const form = reactive({
   maDu: '',
@@ -158,11 +170,20 @@ async function taiLoaiDoUong() {
 
 async function taiDuLieu() {
   try {
-    dsDoUong.value = await csharpApi.getDoUong(tuKhoa.value)
+    const response = await csharpApi.getDoUong(tuKhoa.value, {
+      page: phanTrang.page,
+      pageSize: phanTrang.pageSize
+    })
+    ganDuLieuPhanTrang(response)
     baoThanhCong('Tải dữ liệu đồ uống thành công.')
   } catch (error) {
     baoLoi(error.message)
   }
+}
+
+async function timKiem() {
+  phanTrang.page = 1
+  await taiDuLieu()
 }
 
 async function batDauThem() {
@@ -173,7 +194,7 @@ async function batDauThem() {
     await taiDuLieu()
   }
   ganForm()
-  form.maDu = taoMaDoUong()
+  form.maDu = await taoMaDoUong()
   thongBao.value = ''
   hopThoaiDangMo.value = 'form'
 }
@@ -225,6 +246,7 @@ async function xoaDuLieu(maDu) {
 
 function lamMoi() {
   tuKhoa.value = ''
+  phanTrang.page = 1
   dongHopThoai()
   taiLoaiDoUong()
   taiDuLieu()
@@ -245,8 +267,8 @@ function ganForm(du = null) {
   form.donGia = du?.donGia || 0
 }
 
-function taoMaDoUong() {
-  return taoMaTiepTheo(dsDoUong.value, 'maDu', 'DU')
+async function taoMaDoUong() {
+  return taoMaTiepTheo(await layTatCaDoUong(), 'maDu', 'DU')
 }
 
 function taoMaTiepTheo(items, field, prefix) {
@@ -260,6 +282,31 @@ function taoMaTiepTheo(items, field, prefix) {
 
 function dinhDangTien(value) {
   return Number(value || 0).toLocaleString('vi-VN') + ' đ'
+}
+
+function ganDuLieuPhanTrang(response) {
+  if (Array.isArray(response)) {
+    dsDoUong.value = response
+    phanTrang.totalItems = response.length
+    phanTrang.totalPages = response.length ? 1 : 0
+    return
+  }
+
+  dsDoUong.value = response.items || []
+  phanTrang.page = response.page || 1
+  phanTrang.pageSize = response.pageSize || phanTrang.pageSize
+  phanTrang.totalItems = response.totalItems || 0
+  phanTrang.totalPages = response.totalPages || 0
+}
+
+async function doiTrang(page) {
+  phanTrang.page = page
+  await taiDuLieu()
+}
+
+async function layTatCaDoUong() {
+  const response = await csharpApi.getDoUong('')
+  return Array.isArray(response) ? response : response.items || []
 }
 
 function baoThanhCong(message) {

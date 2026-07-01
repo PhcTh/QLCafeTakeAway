@@ -13,7 +13,7 @@
       <div class="thanh-cong-cu">
         <div class="khu-tim-kiem">
           <input v-model="tuKhoa" type="text" placeholder="Nhập số đơn, nhà cung cấp hoặc người lập">
-          <button @click="taiDuLieu"><span class="icon-nut">⌕</span>Tìm kiếm</button>
+          <button @click="timKiem"><span class="icon-nut">⌕</span>Tìm kiếm</button>
         </div>
 
         <div class="khu-nut">
@@ -29,6 +29,7 @@
             <th>Ngày lập</th>
             <th>Nhà cung cấp</th>
             <th>Người lập</th>
+            <th>Trạng thái</th>
             <th>Tổng dự kiến</th>
             <th class="cot-thao-tac cot-thao-tac-rong">Thao tác</th>
           </tr>
@@ -40,22 +41,29 @@
             <td>{{ dinhDangNgay(don.ngayLapDon) }}</td>
             <td>{{ don.nhaCungCap }}</td>
             <td>{{ don.nguoiLapDon }}</td>
+            <td>{{ hienThiTrangThai(don.trangThai) }}</td>
             <td>{{ dinhDangTien(tinhTongDon(don)) }}</td>
             <td>
               <div class="nhom-thao-tac">
                 <button class="nut-bang nut-xem" @click="xemChiTiet(don)"><span class="icon-nut">i</span>Xem</button>
-                <button class="nut-bang" @click="batDauSua(don)"><span class="icon-nut">✎</span>Sửa</button>
+                <button class="nut-bang" :disabled="!coTheSuaDon(don)" @click="batDauSua(don)"><span class="icon-nut">✎</span>Sửa</button>
                 <button class="nut-bang" @click="xuatMauBieu(don)"><span class="icon-nut">⎙</span>In</button>
-                <button class="nut-bang nut-xoa" @click="xoaDon(don.soDnlm)"><span class="icon-nut">×</span>Xóa</button>
+                <button class="nut-bang nut-xoa" :disabled="!coTheSuaDon(don)" @click="xoaDon(don.soDnlm)"><span class="icon-nut">×</span>Xóa</button>
               </div>
             </td>
           </tr>
 
           <tr v-if="!dsDon.length">
-            <td colspan="6" class="dong-rong">Không có đơn nguyên liệu mua.</td>
+            <td colspan="7" class="dong-rong">Không có đơn nguyên liệu mua.</td>
           </tr>
         </tbody>
       </table>
+
+      <div v-if="phanTrang.totalPages > 1" class="khu-nut form-actions">
+        <button :disabled="phanTrang.page <= 1" @click="doiTrang(phanTrang.page - 1)">Trước</button>
+        <span>Trang {{ phanTrang.page }} / {{ phanTrang.totalPages }}</span>
+        <button :disabled="phanTrang.page >= phanTrang.totalPages" @click="doiTrang(phanTrang.page + 1)">Sau</button>
+      </div>
     </div>
 
     <div v-if="hopThoaiDangMo === 'form'" class="lop-phu" @click.self="dongHopThoai">
@@ -199,6 +207,7 @@
             <div><span>Bộ phận</span><strong>{{ donDangXem.boPhan }}</strong></div>
             <div><span>Người lập</span><strong>{{ donDangXem.nguoiLapDon }}</strong></div>
             <div><span>Quản lý</span><strong>{{ donDangXem.quanLy || '-' }}</strong></div>
+            <div><span>Trạng thái</span><strong>{{ hienThiTrangThai(donDangXem.trangThai) }}</strong></div>
             <div><span>Nhân viên hệ thống</span><strong>{{ donDangXem.tenNhanVien }}</strong></div>
             <div><span>Mã nhân viên</span><strong>{{ donDangXem.maNd }}</strong></div>
             <div class="rong"><span>Ghi chú</span><strong>{{ donDangXem.ghiChu || '-' }}</strong></div>
@@ -232,7 +241,13 @@
           <div class="mau-bieu-actions">
             <div class="tong-don">Tổng giá trị đơn dự kiến: <strong>{{ dinhDangTien(tinhTongDon(donDangXem)) }}</strong></div>
             <div class="khu-nut">
-              <button @click="batDauSua(donDangXem)"><span class="icon-nut">✎</span>Sửa đơn</button>
+              <select :value="donDangXem.trangThai || 'MoiLap'" :disabled="!coTheSuaDon(donDangXem)" @change="doiTrangThaiDon(donDangXem, $event.target.value)">
+                <option value="MoiLap">Mới lập</option>
+                <option value="DaGuiNCC">Đã gửi NCC</option>
+                <option value="DaNhapHang">Đã nhập hàng</option>
+                <option value="DaHuy">Đã hủy</option>
+              </select>
+              <button :disabled="!coTheSuaDon(donDangXem)" @click="batDauSua(donDangXem)"><span class="icon-nut">✎</span>Sửa đơn</button>
               <button @click="xuatMauBieu(donDangXem)"><span class="icon-nut">⎙</span>Xuất mẫu</button>
               <button @click="dongHopThoai"><span class="icon-nut">×</span>Đóng</button>
             </div>
@@ -260,6 +275,12 @@ const maNccDangChon = ref('')
 const hopThoaiDangMo = ref('')
 const dangSua = ref(false)
 const donDangXem = ref(null)
+const phanTrang = reactive({
+  page: 1,
+  pageSize: 10,
+  totalItems: 0,
+  totalPages: 0
+})
 
 const form = reactive(taoFormMacDinh())
 
@@ -270,11 +291,20 @@ onMounted(async () => {
 
 async function taiDuLieu() {
   try {
-    dsDon.value = await csharpApi.getDonNguyenLieuMua(tuKhoa.value)
+    const response = await csharpApi.getDonNguyenLieuMua(tuKhoa.value, {
+      page: phanTrang.page,
+      pageSize: phanTrang.pageSize
+    })
+    ganDuLieuPhanTrang(response)
     baoThanhCong('Tải đơn nguyên liệu mua thành công.')
   } catch (error) {
     baoLoi(error.message)
   }
+}
+
+async function timKiem() {
+  phanTrang.page = 1
+  await taiDuLieu()
 }
 
 async function taiNguyenLieu() {
@@ -315,6 +345,12 @@ async function luuDuLieu() {
 }
 
 async function xoaDon(soDnlm) {
+  const don = dsDon.value.find((item) => item.soDnlm === soDnlm)
+  if (don && !coTheSuaDon(don)) {
+    baoLoi('Đơn đã nhập hàng không được xóa.')
+    return
+  }
+
   if (!confirm(`Xóa đơn ${soDnlm}?`)) return
 
   try {
@@ -366,6 +402,7 @@ function taoDuLieuGuiLenApi() {
     quanLy: form.quanLy,
     tenNhanVien: form.tenNhanVien,
     maNd: form.maNd,
+    trangThai: form.trangThai,
     chiTiet
   }
 }
@@ -379,6 +416,11 @@ function batDauThem() {
 }
 
 function batDauSua(don) {
+  if (!coTheSuaDon(don)) {
+    baoLoi('Đơn đã nhập hàng không được sửa.')
+    return
+  }
+
   dangSua.value = true
   donDangXem.value = null
   ganFormTuDon(don)
@@ -429,6 +471,7 @@ function xoaDongChiTiet(index) {
 
 function lamMoi() {
   tuKhoa.value = ''
+  phanTrang.page = 1
   dongHopThoai()
   taiDuLieu()
 }
@@ -448,6 +491,7 @@ function taoFormMacDinh() {
     quanLy: layQuanLyMacDinh(),
     tenNhanVien: nguoiDung.tenNd,
     maNd: nguoiDung.maNd,
+    trangThai: 'MoiLap',
     chiTiet: [
       {
         maNl: '',
@@ -487,6 +531,7 @@ function ganFormTuDon(don) {
   form.quanLy = don.quanLy || ''
   form.tenNhanVien = don.tenNhanVien || ''
   form.maNd = don.maNd || ''
+  form.trangThai = don.trangThai || 'MoiLap'
   const chiTietDon = don.chiTiet || []
   form.chiTiet = chiTietDon.length
     ? chiTietDon.map((ct) => ({
@@ -552,6 +597,53 @@ function dinhDangTien(value) {
 
 function dinhDangNgay(value) {
   return value || ''
+}
+
+function ganDuLieuPhanTrang(response) {
+  if (Array.isArray(response)) {
+    dsDon.value = response
+    phanTrang.totalItems = response.length
+    phanTrang.totalPages = response.length ? 1 : 0
+    return
+  }
+
+  dsDon.value = response.items || []
+  phanTrang.page = response.page || 1
+  phanTrang.pageSize = response.pageSize || phanTrang.pageSize
+  phanTrang.totalItems = response.totalItems || 0
+  phanTrang.totalPages = response.totalPages || 0
+}
+
+async function doiTrang(page) {
+  phanTrang.page = page
+  await taiDuLieu()
+}
+
+function coTheSuaDon(don) {
+  return (don?.trangThai || 'MoiLap') !== 'DaNhapHang'
+}
+
+async function doiTrangThaiDon(don, trangThai) {
+  try {
+    await csharpApi.updateTrangThaiDonNguyenLieuMua(don.soDnlm, trangThai)
+    baoThanhCong('Cập nhật trạng thái đơn thành công.')
+    await taiDuLieu()
+    const donMoi = dsDon.value.find((item) => item.soDnlm === don.soDnlm)
+    donDangXem.value = donMoi || { ...don, trangThai }
+  } catch (error) {
+    baoLoi(error.message)
+  }
+}
+
+function hienThiTrangThai(trangThai) {
+  const labels = {
+    MoiLap: 'Mới lập',
+    DaGuiNCC: 'Đã gửi NCC',
+    DaNhapHang: 'Đã nhập hàng',
+    DaHuy: 'Đã hủy'
+  }
+
+  return labels[trangThai] || trangThai || 'Mới lập'
 }
 
 function xuatMauBieu(don) {

@@ -1,17 +1,21 @@
 //cầu nối giữa vue và php
+import { dangXuat, layTokenDangNhap } from '../auth/session'
+
 const API_BASE_URL =
   import.meta.env.VITE_PHP_API_URL || "http://127.0.0.1:8093/api.php";
 
 async function request(path, options = {}) {
   let response;
+  const token = layTokenDangNhap()
 
   try {
     response = await fetch(buildUrl(path), {
+      ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {})
-      },
-      ...options
+      }
     });
   } catch {
     throw new Error(
@@ -27,6 +31,11 @@ async function request(path, options = {}) {
       message = error.message || message;
     } catch {
       // API khong tra JSON thi giu thong bao mac dinh.
+    }
+
+    if (response.status === 401) {
+      dangXuat()
+      chuyenVeDangNhap()
     }
 
     throw new Error(message);
@@ -99,4 +108,11 @@ function buildUrl(path) {
   const params = new URLSearchParams(queryString);
   params.set("route", `/api${routePath}`);
   return `${API_BASE_URL}?${params.toString()}`;
+}
+
+function chuyenVeDangNhap() {
+  if (window.location.pathname === '/dang-nhap') return
+
+  const redirect = `${window.location.pathname}${window.location.search}`
+  window.location.href = `/dang-nhap?redirect=${encodeURIComponent(redirect)}`
 }

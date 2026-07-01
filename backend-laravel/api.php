@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');// Cho Vue gọi từ port khác
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 // Gửi request OPTIONS để kiểm tra CORS
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
@@ -59,10 +59,16 @@ function proxy_to_csharp(string $route, string $method): void
     }
 
     $body = file_get_contents('php://input') ?: '';
+    $headers = "Content-Type: application/json\r\n";
+    $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if ($authorization !== '') {
+        $headers .= "Authorization: {$authorization}\r\n";
+    }
+
     $options = [
         'http' => [
             'method' => $method,
-            'header' => "Content-Type: application/json\r\n",
+            'header' => $headers,
             'content' => in_array($method, ['POST', 'PUT'], true) ? $body : '',
             'ignore_errors' => true,
             'timeout' => 15,

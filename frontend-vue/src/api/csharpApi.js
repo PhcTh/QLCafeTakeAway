@@ -1,15 +1,19 @@
+import { dangXuat, layTokenDangNhap } from '../auth/session'
+
 const API_BASE_URL = import.meta.env.VITE_CSHARP_API_URL || 'http://localhost:5155/api'
 
 async function request(path, options = {}) {
   let response
+  const token = layTokenDangNhap()
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {})
-      },
-      ...options
+      }
     })
   } catch {
     throw new Error('Khong ket noi duoc backend C#. Hay chay: cd backend-csharp roi dotnet run --urls http://localhost:5155')
@@ -23,6 +27,11 @@ async function request(path, options = {}) {
       message = error.message || message
     } catch {
       // API khong tra JSON thi giu thong bao mac dinh.
+    }
+
+    if (response.status === 401) {
+      dangXuat()
+      chuyenVeDangNhap()
     }
 
     throw new Error(message)
@@ -43,8 +52,8 @@ export const csharpApi = {
     })
   },
 
-  getLoaiDoUong(keyword = '') {
-    return request(`/loai-do-uong${buildQuery(keyword)}`)
+  getLoaiDoUong(keyword = '', paging = null) {
+    return request(`/loai-do-uong${buildQuery({ keyword, ...(paging || {}) })}`)
   },
 
   createLoaiDoUong(data) {
@@ -67,8 +76,8 @@ export const csharpApi = {
     })
   },
 
-  getDoUong(keyword = '') {
-    return request(`/do-uong${buildQuery(keyword)}`)
+  getDoUong(keyword = '', paging = null) {
+    return request(`/do-uong${buildQuery({ keyword, ...(paging || {}) })}`)
   },
 
   createDoUong(data) {
@@ -91,8 +100,8 @@ export const csharpApi = {
     })
   },
 
-  getNguyenLieu(keyword = '') {
-    return request(`/nguyen-lieu${buildQuery(keyword)}`)
+  getNguyenLieu(keyword = '', paging = null) {
+    return request(`/nguyen-lieu${buildQuery({ keyword, ...(paging || {}) })}`)
   },
 
   createNguyenLieu(data) {
@@ -115,8 +124,8 @@ export const csharpApi = {
     })
   },
 
-  getNguoiDung(keyword = '') {
-    return request(`/nguoi-dung${buildQuery(keyword)}`)
+  getNguoiDung(keyword = '', paging = null) {
+    return request(`/nguoi-dung${buildQuery({ keyword, ...(paging || {}) })}`)
   },
 
   createNguoiDung(data) {
@@ -140,11 +149,11 @@ export const csharpApi = {
   },
 
   getNhomNguoiDung(keyword = '') {
-    return request(`/nhom-nguoi-dung${buildQuery(keyword)}`)
+    return request(`/nhom-nguoi-dung${buildQuery({ keyword })}`)
   },
 
-  getDonNguyenLieuMua(keyword = '') {
-    return request(`/don-nguyen-lieu-mua${buildQuery(keyword)}`)
+  getDonNguyenLieuMua(keyword = '', paging = null) {
+    return request(`/don-nguyen-lieu-mua${buildQuery({ keyword, ...(paging || {}) })}`)
   },
 
   createDonNguyenLieuMua(data) {
@@ -167,6 +176,13 @@ export const csharpApi = {
     })
   },
 
+  updateTrangThaiDonNguyenLieuMua(id, trangThai) {
+    return request(`/don-nguyen-lieu-mua/${id}/trang-thai`, {
+      method: 'PUT',
+      body: JSON.stringify({ trangThai })
+    })
+  },
+
   getDoUongBanChay(thang, nam) {
     return request(`/bao-cao/do-uong-ban-chay?thang=${encodeURIComponent(thang)}&nam=${encodeURIComponent(nam)}`)
   },
@@ -176,7 +192,23 @@ export const csharpApi = {
   }
 }
 
-function buildQuery(keyword) {
-  const value = keyword.trim()
-  return value ? `?keyword=${encodeURIComponent(value)}` : ''
+function buildQuery(params = {}) {
+  const searchParams = new URLSearchParams()
+
+  for (const [key, rawValue] of Object.entries(params)) {
+    if (rawValue === null || rawValue === undefined || rawValue === '') continue
+    const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue
+    if (value === '') continue
+    searchParams.set(key, value)
+  }
+
+  const query = searchParams.toString()
+  return query ? `?${query}` : ''
+}
+
+function chuyenVeDangNhap() {
+  if (window.location.pathname === '/dang-nhap') return
+
+  const redirect = `${window.location.pathname}${window.location.search}`
+  window.location.href = `/dang-nhap?redirect=${encodeURIComponent(redirect)}`
 }

@@ -17,11 +17,24 @@ export function layNguoiDungDangNhap() {
 }
 
 export function daDangNhap() {
-  return Boolean(layNguoiDungDangNhap())
+  return Boolean(layTokenDangNhap())
 }
 
 export function dangXuat() {
   sessionStorage.removeItem(SESSION_KEY)
+}
+
+export function layTokenDangNhap() {
+  return layNguoiDungDangNhap()?.token || ''
+}
+
+export function coQuyen(maQuyen) {
+  const nguoiDung = layNguoiDungDangNhap()
+  return Boolean(nguoiDung?.maQuyen?.includes(maQuyen) || nguoiDung?.maNhom?.includes('N04'))
+}
+
+export function thuocNhom(maNhom) {
+  return Boolean(layNguoiDungDangNhap()?.maNhom?.includes(maNhom))
 }
 
 export function layQuanLyMacDinh() {

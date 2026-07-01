@@ -26,9 +26,9 @@
         </button>
 
         <div v-show="nhomDangMo.danhMuc" class="danh-sach-con">
-          <router-link to="/do-uong" class="muc-con">Đồ uống</router-link>
-          <router-link to="/loai-do-uong" class="muc-con">Loại đồ uống</router-link>
-          <router-link to="/nguyen-lieu" class="muc-con">Nguyên liệu</router-link>
+          <router-link v-if="coQuyen('Q08')" to="/do-uong" class="muc-con">Đồ uống</router-link>
+          <router-link v-if="coQuyen('Q08')" to="/loai-do-uong" class="muc-con">Loại đồ uống</router-link>
+          <router-link v-if="coQuyen('Q08')" to="/nguyen-lieu" class="muc-con">Nguyên liệu</router-link>
           <router-link to="/khach-hang" class="muc-con">Khách hàng <span class="tag-php">PHP</span></router-link>
           <router-link to="/nha-cung-cap" class="muc-con">Nhà cung cấp <span class="tag-php">PHP</span></router-link>
         </div>
@@ -41,9 +41,9 @@
         </button>
 
         <div v-show="nhomDangMo.nghiepVu" class="danh-sach-con">
-          <router-link to="/don-nguyen-lieu-mua" class="muc-con">Lập đơn nguyên liệu mua</router-link>
-          <router-link to="/bao-cao-doanh-thu-ngay" class="muc-con">Báo cáo doanh thu ngày</router-link>
-          <router-link to="/do-uong-ban-chay" class="muc-con">Đồ uống bán chạy</router-link>
+          <router-link v-if="coQuyen('Q04')" to="/don-nguyen-lieu-mua" class="muc-con">Lập đơn nguyên liệu mua</router-link>
+          <router-link v-if="coQuyen('Q05')" to="/bao-cao-doanh-thu-ngay" class="muc-con">Báo cáo doanh thu ngày</router-link>
+          <router-link v-if="coQuyen('Q07')" to="/do-uong-ban-chay" class="muc-con">Đồ uống bán chạy</router-link>
         </div>
       </div>
 
@@ -54,7 +54,7 @@
         </button>
 
         <div v-show="nhomDangMo.heThong" class="danh-sach-con">
-          <router-link to="/quan-ly-tai-khoan" class="muc-con">Quản lý tài khoản người dùng</router-link>
+          <router-link v-if="thuocNhom('N04')" to="/quan-ly-tai-khoan" class="muc-con">Quản lý tài khoản người dùng</router-link>
         </div>
       </div>
     </nav>
@@ -71,7 +71,7 @@
 <script setup>
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { dangXuat, layNguoiDungDangNhap } from '../auth/session'
+import { coQuyen, dangXuat, layNguoiDungDangNhap, thuocNhom } from '../auth/session'
 
 const router = useRouter()
 const nguoiDung = layNguoiDungDangNhap()
