@@ -28,3 +28,5 @@ Desktop.ini
 # Temporary/generated files
 *.tmp
 *.log
+_codex_analysis/
+.agents/
